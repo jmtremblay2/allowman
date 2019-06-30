@@ -1,11 +1,11 @@
 create table households (
-  hid          integer,
+  hid          SERIAL,
 
   PRIMARY KEY (hid)
 );
 
 create table budgets (
-  bid integer,
+  bid SERIAL,
 
   hid integer,
 
@@ -17,7 +17,7 @@ create table budgets (
 );
 
 create table accounts (
-  accid integer,
+  accid SERIAL,
 
   hid integer,
 
@@ -28,7 +28,7 @@ create table accounts (
 );
 
 create table statements (
-  stmtid integer,
+  stmtid SERIAL,
 
   accid integer,
 
@@ -42,7 +42,7 @@ create table statements (
 
 
 create table tags (
-  tid integer,
+  tid SERIAL,
 
   descr text,
 
@@ -50,7 +50,7 @@ create table tags (
 );
 
 create table transactions (
-  trid integer,
+  trid SERIAL,
 
   stmtid integer,
 
@@ -71,5 +71,4 @@ create table trtags (
   FOREIGN KEY (trid) REFERENCES transactions(trid),
   FOREIGN KEY (tid) REFERENCES tags(tid)
 );
-
 

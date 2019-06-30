@@ -2,7 +2,7 @@ package scanCSV
 
 import (
     "bufio"
-    _ "fmt"
+    _"fmt"
     "log"
     "os"
     "regexp"
@@ -15,6 +15,23 @@ type FileLines = []string
 type CSVField = string
 type CSVTable = [][]CSVField
 
+//remove spaces from strings
+func RemoveSpaces(s []string) []string{
+  s2 := make([]string, len(s))
+  for i, ss := range(s){
+    s2[i] = strings.Replace(ss," ","",-1)
+  }
+  return s2
+}
+
+// cast strings to lwer case
+func ToLower(s []string) []string{
+  s2 := make([]string, len(s))
+  for i, ss := range(s){
+    s2[i] = strings.ToLower(ss)
+  }
+  return s2
+}
 
 // readLines reads a whole file into memory
 // and returns a slice of its lines.
@@ -150,34 +167,23 @@ func ProcessCSVFile(fname string) []dataframe.DataFrame {
     DFs := make([]dataframe.DataFrame, len(stmtTables))
     for i,t := range stmtTables{
       tables[i] = SplitTokens(t)
+      // format variable names to kill white spaces and upper case letters
+      tables[i][0] = ToLower(RemoveSpaces(tables[i][0]))
       DFs[i] = CSVTable2DataFrame(tables[i])
     }
   return DFs
 }
-/*
-func main() {
-    lines, err := readLines("/home/jm/allowman/bankcreditcardtransactions/BOA-Checking-1.csv")
-    if err != nil {
-        log.Fatalf("readLines: %s", err)
-    }
 
-    tables := splitTables(lines)
-    printSlice(tables[0])
-    fmt.Println("\n\n")
-    printSlice(tables[1])
-
-    fmt.Println("\n\n")
-
-    df := dataframe.LoadRecords(
-    [][]string{
-        []string{"A", "B", "C", "D"},
-        []string{"a", "4", "5.1", "true"},
-        []string{"k", "5", "7.0", "true"},
-        []string{"k", "4", "6.0", "true"},
-        []string{"a", "2", "7.1", "false"},
-    })
-    fmt.Println(df)
-
-   fmt.Println(df2)
+func GetDFElem(DF dataframe.DataFrame, colname string, index int) string {
+  return DF.Col(colname).Elem(index).String()
 }
-*/
+
+func GetDFElems(DF dataframe.DataFrame, colname string) []string {
+  nrow := DF.Nrow()
+  elems := make([]string, DF.Nrow())
+  for i := 0; i < nrow; i++ {
+    elems[i] = GetDFElem(DF, colname, i)
+  }
+  return elems
+}
+

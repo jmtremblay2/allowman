@@ -2,40 +2,74 @@
 package main
 
 import (
-  "database/sql"
+  "talktodb"
+  "banks"
   "fmt"
-
-  _ "github.com/lib/pq"
+  "path"
+  "os"
 )
 
-const (
-  host     = "localhost"
-  port     = 5432
-  user = "postgres"
-  password = "postgres"
-  dbname   = "allowman"
-)
 
 func main() {
-  psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
-    "password=%s dbname=%s sslmode=disable",
-    host, port, user, password, dbname)
-
-  db, err := sql.Open("postgres", psqlInfo)
-  if err != nil {
-    panic(err)
+  /* DB connection stuff
+   */ 
+  cd := talktodb.ConnData{  
+    Host: "localhost",
+    Port: 5432,
+    User: "postgres",
+    Password: "postgres",
+    Dbname: "allowman",
   }
+
+  /* files for our first pass
+   */
+   allowmanpath := os.Getenv("ALLOWMANPATH")
+  stmtfolder := "bankcreditcardtransactions"
+  var fnames = []struct{
+    fname string
+    bank string
+    // accid is ugly, we'll put application code to handle that eventually but 
+    // for now we just assign something
+    accid int}{
+      {path.Join(allowmanpath,stmtfolder,"/Chase-JM-CC.CSV"),"chase",-1},
+      {path.Join(allowmanpath,stmtfolder,"/BOA-Lynna-CC.csv"),"boacredit",-1},
+      {path.Join(allowmanpath,stmtfolder,"/BOA-Checking-2.csv"),"boacheck",-1},
+      {path.Join(allowmanpath,stmtfolder,"/BOA-Joint-CC.csv"),"boacredit",-1},
+      {path.Join(allowmanpath,stmtfolder,"/Chase-Amazon-CC.CSV"),"chase",-1},
+      {path.Join(allowmanpath,stmtfolder,"/BOA-Checking-1.csv"),"boacheck",-1},
+      {path.Join(allowmanpath,stmtfolder,"/CO-Checking.csv"),"cap1",-1},
+      {path.Join(allowmanpath,stmtfolder,"/CO-Parents-CC.csv"),"cap1",-1},
+    }
+
+  db := talktodb.ConnectToDB(cd)
   defer db.Close()
 
-  err = db.Ping()
-  if err != nil {
-    panic(err)
+  /* create now HOUSEHOLD
+   */
+  hid := talktodb.RegisterHousehold(db)
+
+  /* create new ACCOUNTS
+   */
+  for k, fname := range fnames{
+    accountName := banks.GetAcctName(fname.fname)
+    fnames[k].accid = talktodb.RegisterAccount(db, hid, accountName)
   }
 
-  insertStmt := `INSERT INTO households(hid) VALUES ($1)`
-  _, err = db.Exec(insertStmt, 2)
-  if err != nil {
-    panic(err)
+  for _, fname := range fnames{
+    fmt.Println(fname)
+    switch fname.bank{
+      case "chase": 
+        cs := banks.CreateChaseStmt(fname.fname)
+        banks.ProcessBankStmt(cs, db, fname.accid)
+      case "boacheck":
+        cs := banks.CreateBOACheckStmt(fname.fname)
+        banks.ProcessBankStmt(cs, db, fname.accid)
+      case "boacredit":
+        cs := banks.CreateBOACreditStmt(fname.fname)
+        banks.ProcessBankStmt(cs, db, fname.accid)
+      case "cap1":
+        cs := banks.CreateCap1Stmt(fname.fname)
+        banks.ProcessBankStmt(cs, db, fname.accid)
+    }
   }
-  fmt.Println("Successfully connected!")
-}
+}  
